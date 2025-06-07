@@ -2,8 +2,8 @@ const output = document.getElementById('output');
 const btn = document.getElementById('start-btn');
 
 btn.onclick = () => {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    output.textContent = "Sorry, your browser doesn't support Speech Recognition.";
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    output.textContent = "Your browser does not support voice input.";
     return;
   }
 
@@ -15,37 +15,38 @@ btn.onclick = () => {
   recognition.maxAlternatives = 1;
 
   recognition.start();
-
-  output.textContent = 'Listening...';
+  output.textContent = '🎙️ Listening...';
 
   recognition.onresult = async (event) => {
-    const text = event.results[0][0].transcript.toLowerCase();
-    output.textContent = `You said: "${text}"`;
+    const userInput = event.results[0][0].transcript.toLowerCase();
+    output.textContent = `You: "${userInput}"`;
 
-    // Send to backend proxy
-    const response = await fetch('https://replit.com/@rajpaljai0203/FamiliarInvolvedDevice+/api/chat' {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
-    });
+    try {
+      const response = await fetch('https://replit.com/@rajpaljai0203/FamiliarInvolvedDevice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userInput })
+      });
 
-    if (!response.ok) {
-      output.textContent = 'Error communicating with backend.';
-      return;
-    }
+      if (!response.ok) throw new Error('Server response not OK');
 
-    const data = await response.json();
-    output.textContent = `Monday AI: ${data.reply}`;
+      const data = await response.json();
+      output.textContent = `Monday AI: ${data.reply}`;
 
-    // Use speech synthesis for voice reply on certain commands (like time, math)
-    if (/time|what is|calculate|weather/.test(text)) {
-      const utterance = new SpeechSynthesisUtterance(data.reply);
-      utterance.lang = 'en-US';
-      speechSynthesis.speak(utterance);
+      // Only speak if question is not link-related
+      if (/time|weather|how|what|calculate/.test(userInput)) {
+        const speak = new SpeechSynthesisUtterance(data.reply);
+        speak.lang = 'en-US';
+        speechSynthesis.speak(speak);
+      }
+
+    } catch (err) {
+      output.textContent = '❌ Error contacting Monday AI.';
+      console.error('Fetch error:', err);
     }
   };
 
-  recognition.onerror = (event) => {
-    output.textContent = `Error occurred: ${event.error}`;
+  recognition.onerror = (e) => {
+    output.textContent = `Speech error: ${e.error}`;
   };
 };
