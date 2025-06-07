@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Monday AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;900&display=swap" rel="stylesheet">
+  <style>
+    :root { --main:#00c2ff; --accent:#ff6f61; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:radial-gradient(circle at top, #00182e 0%, #000c20 60%, #000312 100%);
+      color:#e6f0ff; font-family:Poppins,sans-serif; user-select:none; padding:20px; text-align:center;
+    }
+    h1 {
+      font-size:3rem; font-weight:900; color:var(--main);
+      letter-spacing:.15em; margin-bottom:1rem;
+    }
+    button {
+      background:var(--accent); border:none; border-radius:40px; padding:1rem 3rem; font-size:1.3rem;
+      color:#fff; font-weight:700; box-shadow:0 8px 25px rgba(255,111,97,.5); cursor:pointer; transition:.3s;
+    }
+    button:hover { transform:scale(1.07); background:#ff3b21; }
+    #panel {
+      width:92vw; max-width:640px; min-height:3rem; margin-top:1.8rem; border-radius:22px;
+      background:rgba(255,255,255,.08); backdrop-filter:blur(8px); padding:1.4rem 2rem;
+      font-size:1.15rem; line-height:1.4; white-space:pre-wrap; box-shadow:0 0 14px #ffffff20;
+    }
+    #bar {
+      margin-top:1.2rem; width:90px; height:12px; border-radius:20px;
+      background:var(--accent); opacity:0; animation:pulse 1.4s infinite;
+    }
+    #bar.on { opacity:1; }
+    @keyframes pulse {
+      0%,100% { transform:scaleX(1); }
+      50% { transform:scaleX(1.5); opacity:.6; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Monday AI</h1>
+<button id="startBtn">Start Listening 🎤</button>
+<div id="panel">Tap the button and ask me anything…</div>
+<div id="bar"></div>
+
+<script>
+const OPENAI_KEY = "sk-REPLACE_WITH_YOUR_KEY";  // Replace with your OpenAI key
+const STORAGE_KEY = "monday-memory";
+let memory = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+const panel = document.getElementById("panel");
+const startBtn = document.getElementById("startBtn");
+const bar = document.getElementById("bar");
+
+function speak(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.pitch = 1.15;
+  u.rate = 1;
+  u.volume = 1;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+async function askGPT(userText) {
+  const body = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: "You are Monday AI, a friendly and helpful assistant with memory. Answer clearly and helpfully." },
+      ...memory.slice(-20),
+      { role: "user", content: userText }
+    ],
+    temperature: 0.7
+  };
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + OPENAI_KEY
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) throw new Error("OpenAI error " + res.status);
+  const data = await res.json();
+  return data.choices[0].message.content.trim();
+}
+
+async function startListening() {
+  if (!("webkitSpeechRecognition" in window)) {
+    alert("Speech recognition not supported in this browser.");
+    return;
+  }
+
+  const rec = new webkitSpeechRecognition();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  panel.textContent = "Listening…";
+  bar.classList.add("on");
+  rec.start();
+
+  rec.onresult = async e => {
+    bar.classList.remove("on");
+    const user = e.results[0][0].transcript.trim();
+    panel.textContent = "You: " + user;
+    memory.push({ role: "user", content: user });
+
+    try {
+      const reply = await askGPT(user);
+      panel.textContent = reply;
+      speak(reply);
+      memory.push({ role: "assistant", content: reply });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
+    } catch (err) {
+      panel.textContent = err.message;
+      speak("Sorry, I had a problem.");
+    }
+  };
+
+  rec.onerror = e => {
+    bar.classList.remove("on");
+    panel.textContent = "Error: " + e.error;
+  };
+}
+
+startBtn.addEventListener("click", startListening);
+</script>
+</body>
+</html>
