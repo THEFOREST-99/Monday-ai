@@ -23,7 +23,7 @@ btn.onclick = () => {
     output.textContent = `You said: "${text}"`;
 
     // Send to backend proxy
-    const response = await fetch('https://your-replit-backend-url/api/chat'https://replit.com/join/jfsbsvtexx-rajpaljai0203+/api/chat. {
+    const response = await fetch('https://replit.com/join/jfsbsvtexx-rajpaljai0203' {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text }),
