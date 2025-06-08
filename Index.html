@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Monday AI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monday AI</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🎙️ Monday AI</h1>
-  <button id="start">Start Listening</button>
-  <div id="screen">Tap the button and ask me anything…</div>
-  <div id="bar"></div>
+  <div class="container">
+    <h1>🎙️ Monday AI</h1>
+    <button onclick="startListening()">🎤 Start Listening</button>
+    <p id="response">Say something like "what's the time?" or "calculate 10 plus 5"</p>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
