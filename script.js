@@ -1,52 +1,59 @@
-const output = document.getElementById('output');
-const btn = document.getElementById('start-btn');
+const API_URL = "https://monday-backend.your‑name.repl.co/api/chat";   // <-- put your backend URL
+const startBtn = document.getElementById("start");
+const screen = document.getElementById("screen");
+const bar = document.getElementById("bar");
+let memory = JSON.parse(localStorage.getItem("mondayMem") || "[]");
 
-btn.onclick = () => {
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    output.textContent = "Your browser does not support voice input.";
+function speak(text){
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.pitch = 1.15;
+  speechSynthesis.speak(u);
+}
+
+async function askBackend(msg){
+  const res = await fetch(https://replit.com/@ANGADGAMER321/Monday-backend-1?s=app,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ message: msg, memory })
+  });
+  if(!res.ok) throw new Error("Backend error");
+  const data = await res.json();
+  return data.reply;
+}
+
+function listen(){
+  if(!("webkitSpeechRecognition"in window || "SpeechRecognition"in window)){
+    screen.textContent="Browser has no speech input.";
     return;
   }
+  const Rec = window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec = new Rec();
+  rec.lang="en-US"; rec.interimResults=false;
+  rec.start(); bar.classList.add("on"); screen.textContent="Listening…";
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
+  rec.onresult = async e=>{
+    bar.classList.remove("on");
+    const user = e.results[0][0].transcript.trim();
+    screen.textContent="You: "+user;
+    memory.push({role:"user",content:user});            // save to memory
 
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.start();
-  output.textContent = '🎙️ Listening...';
-
-  recognition.onresult = async (event) => {
-    const userInput = event.results[0][0].transcript.toLowerCase();
-    output.textContent = `You: "${userInput}"`;
-
-    try {
-      const response = await fetch('https://replit.com/@rajpaljai0203/FamiliarInvolvedDevice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userInput })
-      });
-
-      if (!response.ok) throw new Error('Server response not OK');
-
-      const data = await response.json();
-      output.textContent = `Monday AI: ${data.reply}`;
-
-      // Only speak if question is not link-related
-      if (/time|weather|how|what|calculate/.test(userInput)) {
-        const speak = new SpeechSynthesisUtterance(data.reply);
-        speak.lang = 'en-US';
-        speechSynthesis.speak(speak);
-      }
-
-    } catch (err) {
-      output.textContent = '❌ Error contacting Monday AI.';
-      console.error('Fetch error:', err);
+    try{
+      const reply = await askBackend(user);
+      screen.textContent = reply;
+      speak(reply);
+      memory.push({role:"assistant",content:reply});
+      localStorage.setItem("mondayMem", JSON.stringify(memory));
+    }catch(err){
+      screen.textContent = err.message;
+      speak("Sorry, something went wrong.");
     }
   };
 
-  recognition.onerror = (e) => {
-    output.textContent = `Speech error: ${e.error}`;
+  rec.onerror = e=>{
+    bar.classList.remove("on");
+    screen.textContent = "Speech error: "+e.error;
   };
-};
+}
+
+startBtn.addEventListener("click", listen);
