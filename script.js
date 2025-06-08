@@ -1,4 +1,4 @@
-const API_URL = "https://monday-backend.your‑name.repl.co/api/chat";   // <-- put your backend URL
+const API_URL = "https://replit.com/@ANGADGAMER321/Monday-backend-1?s=app";   // <-- put your backend URL
 const startBtn = document.getElementById("start");
 const screen = document.getElementById("screen");
 const bar = document.getElementById("bar");
@@ -12,7 +12,7 @@ function speak(text){
 }
 
 async function askBackend(msg){
-  const res = await fetch(https://replit.com/@ANGADGAMER321/Monday-backend-1?s=app,{
+  const res = await fetch(API_URL,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({ message: msg, memory })
