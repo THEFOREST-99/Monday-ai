@@ -1,59 +1,56 @@
-const API_URL = "https://replit.com/@ANGADGAMER321/Monday-backend-1?s=app";   // <-- put your backend URL
-const startBtn = document.getElementById("start");
-const screen = document.getElementById("screen");
-const bar = document.getElementById("bar");
-let memory = JSON.parse(localStorage.getItem("mondayMem") || "[]");
+const response = document.getElementById('response');
+const synth = window.speechSynthesis;
 
-function speak(text){
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  u.pitch = 1.15;
-  speechSynthesis.speak(u);
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  synth.speak(utter);
+  response.innerText = text;
 }
 
-async function askBackend(msg){
-  const res = await fetch(API_URL,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ message: msg, memory })
+async function askChatGPT(question) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer https://replit.com/@ANGADGAMER321/Monday-backend-1?s=app"
+    },
+    body: JSON.stringify({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: question }],
+    })
   });
-  if(!res.ok) throw new Error("Backend error");
+
   const data = await res.json();
-  return data.reply;
+  const answer = data.choices?.[0]?.message?.content || "Sorry, I couldn’t think of a response.";
+  speak(answer);
 }
 
-function listen(){
-  if(!("webkitSpeechRecognition"in window || "SpeechRecognition"in window)){
-    screen.textContent="Browser has no speech input.";
+function startListening() {
+  if (!('webkitSpeechRecognition' in window)) {
+    speak("Sorry, your browser doesn't support voice recognition.");
     return;
   }
-  const Rec = window.SpeechRecognition||window.webkitSpeechRecognition;
-  const rec = new Rec();
-  rec.lang="en-US"; rec.interimResults=false;
-  rec.start(); bar.classList.add("on"); screen.textContent="Listening…";
 
-  rec.onresult = async e=>{
-    bar.classList.remove("on");
-    const user = e.results[0][0].transcript.trim();
-    screen.textContent="You: "+user;
-    memory.push({role:"user",content:user});            // save to memory
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = 'en-IN';
+  recognition.start();
 
-    try{
-      const reply = await askBackend(user);
-      screen.textContent = reply;
-      speak(reply);
-      memory.push({role:"assistant",content:reply});
-      localStorage.setItem("mondayMem", JSON.stringify(memory));
-    }catch(err){
-      screen.textContent = err.message;
-      speak("Sorry, something went wrong.");
+  recognition.onresult = function (event) {
+    const command = event.results[0][0].transcript.toLowerCase();
+    console.log("You said:", command);
+
+    // Simple commands
+    if (command.includes("open youtube")) {
+      response.innerHTML = `YouTube: <a href="https://youtube.com" target="_blank">Click here</a>`;
+    } else if (command.includes("open instagram")) {
+      response.innerHTML = `Instagram: <a href="https://instagram.com" target="_blank">Click here</a>`;
+    } else {
+      // Use ChatGPT for all other responses
+      askChatGPT(command);
     }
   };
 
-  rec.onerror = e=>{
-    bar.classList.remove("on");
-    screen.textContent = "Speech error: "+e.error;
+  recognition.onerror = function () {
+    speak("Sorry, there was an error while listening.");
   };
 }
-
-startBtn.addEventListener("click", listen);
